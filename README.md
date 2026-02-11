@@ -89,13 +89,10 @@ npm start
 Contributions are welcome!
 Feel free to fork this repo and submit a pull request.
 
-### Made with 💖 by Karthikraja , Kaviyarasan , Priyathrashan
-
 📜 License
 This project is for educational purposes.
 
 <p align="center"> Made with ❤️ by Karthikraja, Kaviyarasan, and Priyathrashan </p> ```
-Optional: Add real animation
-If you want a cool animated banner, replace the preview GIF with:
+
 
 
