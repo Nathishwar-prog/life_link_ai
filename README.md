@@ -1,5 +1,4 @@
 <img src="https://readme-typing-svg.herokuapp.com?color=FF0000&size=35&center=true&vCenter=true&width=800&height=70&lines=Blood+Bank+Management+System;Save+Lives+With+Technology" />
-]
 
 <h1 align="center">🩸 Blood Bank Management System</h1>
 
