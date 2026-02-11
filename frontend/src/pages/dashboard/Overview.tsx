@@ -1,112 +1,149 @@
-import { Card, CardContent, CardHeader, CardTitle } from '../../components/ui/Card';
-import { Droplet, Users, Activity, ExternalLink } from 'lucide-react';
+
+import { useState, useEffect } from 'react';
+import { motion } from 'framer-motion';
+import { Droplet, Users, Activity, HeartPulse } from 'lucide-react';
+import { StatCard } from '../../components/dashboard/StatCard';
+import { ActivityChart } from '../../components/dashboard/ActivityChart';
+import { InventoryChart } from '../../components/dashboard/InventoryChart';
+import { GoalChart } from '../../components/dashboard/GoalChart';
+import { RecentActivity } from '../../components/dashboard/RecentActivity';
 import { Button } from '../../components/ui/Button';
 
 export function Overview() {
-    const stats = [
-        {
-            title: "Total Blood Units",
-            value: "1,204",
-            change: "+12%",
-            icon: Droplet,
-            color: "text-red-600",
-            bg: "bg-red-100"
-        },
-        {
-            title: "Active Donors",
-            value: "3,402",
-            change: "+5%",
-            icon: Users,
-            color: "text-blue-600",
-            bg: "bg-blue-100"
-        },
-        {
-            title: "Requests Pending",
-            value: "42",
-            change: "-2%",
-            icon: Activity,
-            color: "text-amber-600",
-            bg: "bg-amber-100"
+    const [inventoryData, setInventoryData] = useState<{ blood_type: string; units: number }[]>([]);
+    const [totalUnits, setTotalUnits] = useState(0);
+    const [activeDonors, setActiveDonors] = useState(0);
+
+    useEffect(() => {
+        const fetchData = async () => {
+            try {
+                // Fetch Inventory
+                const invRes = await fetch('/api/inventory');
+                if (invRes.ok) {
+                    const data = await invRes.json();
+                    setInventoryData(data);
+                    const total = data.reduce((acc: number, item: any) => acc + item.units, 0);
+                    setTotalUnits(total);
+                }
+
+                // Fetch Donor Count
+                const donorRes = await fetch('/api/donors/count');
+                if (donorRes.ok) {
+                    const data = await donorRes.json();
+                    setActiveDonors(data.count);
+                }
+            } catch (error) {
+                console.error("Failed to fetch dashboard data", error);
+            }
+        };
+        fetchData();
+    }, []);
+
+    const container = {
+        hidden: { opacity: 0 },
+        show: {
+            opacity: 1,
+            transition: {
+                staggerChildren: 0.1
+            }
         }
-    ];
+    };
 
     return (
-        <div className="space-y-6">
-            <div>
-                <h1 className="text-2xl font-bold text-gray-900">Dashboard Overview</h1>
-                <p className="text-gray-500">Welcome back to LifeLink.</p>
+        <div className="space-y-8 p-4">
+            <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
+                <div>
+                    <motion.h1
+                        initial={{ opacity: 0, x: -20 }}
+                        animate={{ opacity: 1, x: 0 }}
+                        className="text-3xl font-bold bg-clip-text text-transparent bg-gradient-to-r from-red-600 to-rose-400"
+                    >
+                        Welcome Back, Admin
+                    </motion.h1>
+                    <motion.p
+                        initial={{ opacity: 0 }}
+                        animate={{ opacity: 1 }}
+                        transition={{ delay: 0.2 }}
+                        className="text-gray-500 mt-1"
+                    >
+                        Here's what's happening in your blood bank today.
+                    </motion.p>
+                </div>
+                <motion.div
+                    initial={{ opacity: 0, scale: 0.9 }}
+                    animate={{ opacity: 1, scale: 1 }}
+                    className="flex gap-2"
+                >
+                    <Button variant="outline">Download Report</Button>
+                    <Button className="bg-red-600 hover:bg-red-700 text-white shadow-lg shadow-red-200">
+                        + Add Donor
+                    </Button>
+                </motion.div>
             </div>
 
-            <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
-                {stats.map((stat) => (
-                    <Card key={stat.title}>
-                        <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                            <CardTitle className="text-sm font-medium text-gray-600">
-                                {stat.title}
-                            </CardTitle>
-                            <div className={`p-2 rounded-full ${stat.bg}`}>
-                                <stat.icon className={`h-4 w-4 ${stat.color}`} />
-                            </div>
-                        </CardHeader>
-                        <CardContent>
-                            <div className="text-2xl font-bold">{stat.value}</div>
-                            <p className="text-xs text-gray-500">
-                                <span className={stat.change.startsWith('+') ? "text-green-600" : "text-red-600"}>
-                                    {stat.change}
-                                </span>{" "}
-                                from last month
-                            </p>
-                        </CardContent>
-                    </Card>
-                ))}
+            <motion.div
+                variants={container}
+                initial="hidden"
+                animate="show"
+                className="grid gap-6 md:grid-cols-2 lg:grid-cols-4"
+            >
+                <StatCard
+                    title="Total Blood Units"
+                    value={totalUnits.toLocaleString()}
+                    change="+12.5%"
+                    trend="up"
+                    icon={Droplet}
+                    color="text-red-600"
+                    bg="bg-red-100"
+                />
+                <StatCard
+                    title="Active Donors"
+                    value={activeDonors.toLocaleString()}
+                    change="+5.2%"
+                    trend="up"
+                    icon={Users}
+                    color="text-blue-600"
+                    bg="bg-blue-100"
+                />
+                <StatCard
+                    title="Urgent Requests"
+                    value="12"
+                    change="-2.4%"
+                    trend="down"
+                    icon={Activity}
+                    color="text-amber-600"
+                    bg="bg-amber-100"
+                />
+                <StatCard
+                    title="Lives Saved"
+                    value="892"
+                    change="+18%"
+                    trend="up"
+                    icon={HeartPulse}
+                    color="text-rose-600"
+                    bg="bg-rose-100"
+                />
+            </motion.div>
+
+            <div className="grid gap-6 md:grid-cols-7">
+                <div className="md:col-span-4 lg:col-span-4">
+                    <ActivityChart />
+                </div>
+                <div className="md:col-span-3 lg:col-span-2">
+                    <InventoryChart data={inventoryData} />
+                </div>
             </div>
 
-            <div className="grid gap-4 md:grid-cols-2">
-                <Card>
-                    <CardHeader>
-                        <CardTitle>Recent Activity</CardTitle>
-                    </CardHeader>
-                    <CardContent>
-                        <div className="space-y-4">
-                            {[1, 2, 3].map((i) => (
-                                <div key={i} className="flex items-center justify-between border-b border-gray-100 pb-2 last:border-0 last:pb-0">
-                                    <div className="flex items-center space-x-3">
-                                        <div className="h-8 w-8 rounded-full bg-gray-100 flex items-center justify-center">
-                                            <span className="text-xs font-bold text-gray-600">JD</span>
-                                        </div>
-                                        <div>
-                                            <p className="text-sm font-medium text-gray-900">John Doe donated 450ml</p>
-                                            <p className="text-xs text-gray-500">2 hours ago</p>
-                                        </div>
-                                    </div>
-                                    <Button variant="ghost" size="sm"><ExternalLink className="h-4 w-4" /></Button>
-                                </div>
-                            ))}
-                        </div>
-                    </CardContent>
-                </Card>
-
-                <Card>
-                    <CardHeader>
-                        <CardTitle>Urgent Requests</CardTitle>
-                    </CardHeader>
-                    <CardContent>
-                        <div className="space-y-4">
-                            {[1, 2].map((i) => (
-                                <div key={i} className="flex items-center justify-between p-3 bg-red-50 rounded-lg border border-red-100">
-                                    <div>
-                                        <div className="flex items-center space-x-2">
-                                            <span className="px-2 py-0.5 rounded text-xs font-bold bg-red-200 text-red-800">O-Negative</span>
-                                            <span className="text-sm font-medium text-gray-900">City Hospital</span>
-                                        </div>
-                                        <p className="text-xs text-red-600 mt-1">Needed within 4 hours</p>
-                                    </div>
-                                    <Button size="sm" variant="destructive">View</Button>
-                                </div>
-                            ))}
-                        </div>
-                    </CardContent>
-                </Card>
+            <div className="grid gap-6 md:grid-cols-2">
+                <RecentActivity />
+                <motion.div
+                    initial={{ opacity: 0, y: 20 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    transition={{ delay: 0.4 }}
+                    className="h-full"
+                >
+                    {/* Placeholder for Map or other widget */}
+                </motion.div>
             </div>
         </div>
     );
