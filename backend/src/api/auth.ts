@@ -54,6 +54,7 @@ authRouter.post("/login", async (c) => {
         token_type: "bearer",
         role: user.role,
         full_name: user.full_name,
+        id: user.id
     });
 });
 
