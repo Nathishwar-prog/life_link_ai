@@ -14,6 +14,7 @@ import { requestsRouter } from "./api/requests.js";
 import { campaignsRouter } from "./api/campaigns.js";
 import { donorsRouter } from "./api/donors.js";
 import { bloodRequestsRouter } from "./api/blood-requests.js";
+import { inventoryRouter } from "./api/inventory.js";
 
 import { initDB } from "./db/index.js";
 
@@ -31,6 +32,7 @@ app.route("/api/requests", requestsRouter); // Smart Matching / SOS
 app.route("/api/campaigns", campaignsRouter);
 app.route("/api/donors", donorsRouter);
 app.route("/api/blood-requests", bloodRequestsRouter);
+app.route("/api/inventory", inventoryRouter);
 
 const port = 8000;
 console.log("Starting server...");

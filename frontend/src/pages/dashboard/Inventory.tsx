@@ -1,3 +1,4 @@
+
 import { useState, useEffect } from 'react';
 import { useForm } from 'react-hook-form';
 import { z } from 'zod';
@@ -5,19 +6,7 @@ import { zodResolver } from '@hookform/resolvers/zod';
 import { Button } from '../../components/ui/Button';
 import { Input } from '../../components/ui/Input';
 import { Card, CardContent, CardHeader, CardTitle } from '../../components/ui/Card';
-import { Droplet, Plus, Minus, AlertTriangle, Loader2 } from 'lucide-react';
-
-// Mock data until backend is ready
-const MOCK_INVENTORY = [
-    { id: 1, blood_type: 'A+', units: 24, expiry_soon: 2 },
-    { id: 2, blood_type: 'A-', units: 8, expiry_soon: 0 },
-    { id: 3, blood_type: 'B+', units: 15, expiry_soon: 1 },
-    { id: 4, blood_type: 'B-', units: 4, expiry_soon: 0 }, // Low stock
-    { id: 5, blood_type: 'AB+', units: 12, expiry_soon: 0 },
-    { id: 6, blood_type: 'AB-', units: 2, expiry_soon: 0 }, // Critical
-    { id: 7, blood_type: 'O+', units: 30, expiry_soon: 5 },
-    { id: 8, blood_type: 'O-', units: 5, expiry_soon: 0 },
-];
+import { Droplet, AlertTriangle, Loader2 } from 'lucide-react';
 
 const stockSchema = z.object({
     blood_type: z.enum(['A+', 'A-', 'B+', 'B-', 'AB+', 'AB-', 'O+', 'O-']),
@@ -28,9 +17,38 @@ const stockSchema = z.object({
 type StockValues = z.infer<typeof stockSchema>;
 
 export function Inventory() {
-    const [inventory, setInventory] = useState(MOCK_INVENTORY);
-    const [loading, setLoading] = useState(false);
+    const [inventory, setInventory] = useState<{ id: number; blood_type: string; units: number; expiry_soon: number }[]>([]);
+    const [loading, setLoading] = useState(true);
     const [actionLoading, setActionLoading] = useState(false);
+
+    const fetchInventory = async () => {
+        try {
+            setLoading(true);
+            const res = await fetch('/api/inventory');
+            if (!res.ok) throw new Error("Failed to fetch");
+            const data = await res.json();
+
+            const formatted = data.map((item: any, idx: number) => ({
+                id: idx,
+                blood_type: item.blood_type,
+                units: item.units,
+                expiry_soon: 0
+            }));
+
+            // Sort by blood type roughly (A, B, AB, O)
+            formatted.sort((a: any, b: any) => a.blood_type.localeCompare(b.blood_type));
+
+            setInventory(formatted);
+        } catch (error) {
+            console.error(error);
+        } finally {
+            setLoading(false);
+        }
+    };
+
+    useEffect(() => {
+        fetchInventory();
+    }, []);
 
     const { register, handleSubmit, reset } = useForm<StockValues>({
         resolver: zodResolver(stockSchema),
@@ -42,22 +60,23 @@ export function Inventory() {
 
     const onSubmit = async (data: StockValues) => {
         setActionLoading(true);
-        // Simulate API call
-        setTimeout(() => {
-            setInventory(prev => prev.map(item => {
-                if (item.blood_type === data.blood_type) {
-                    return {
-                        ...item,
-                        units: data.action === 'ADD'
-                            ? item.units + data.units
-                            : Math.max(0, item.units - data.units)
-                    };
-                }
-                return item;
-            }));
-            setActionLoading(false);
+        try {
+            const res = await fetch('/api/inventory/update', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify(data)
+            });
+
+            if (!res.ok) throw new Error("Failed to update");
+
+            await fetchInventory();
             reset();
-        }, 1000);
+        } catch (error) {
+            console.error(error);
+            alert("Failed to update inventory");
+        } finally {
+            setActionLoading(false);
+        }
     };
 
     return (
@@ -118,31 +137,32 @@ export function Inventory() {
 
                 {/* Inventory Table/Grid */}
                 <div className="md:col-span-2 grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
-                    {inventory.map((item) => (
-                        <Card key={item.id} className={`${item.units < 5 ? 'border-red-300 bg-red-50' : ''}`}>
-                            <CardHeader className="pb-2">
-                                <div className="flex justify-between items-start">
-                                    <div className={`text-2xl font-bold bg-white w-12 h-12 rounded-full flex items-center justify-center border-2 ${item.units < 5 ? 'border-red-500 text-red-600' : 'border-gray-200 text-gray-700'}`}>
-                                        {item.blood_type}
+                    {loading ? (
+                        <div className="col-span-full flex justify-center py-10">
+                            <Loader2 className="h-8 w-8 animate-spin text-gray-400" />
+                        </div>
+                    ) : (
+                        inventory.map((item) => (
+                            <Card key={item.id} className={`${item.units < 5 ? 'border-red-300 bg-red-50' : ''}`}>
+                                <CardHeader className="pb-2">
+                                    <div className="flex justify-between items-start">
+                                        <div className={`text-2xl font-bold bg-white w-12 h-12 rounded-full flex items-center justify-center border-2 ${item.units < 5 ? 'border-red-500 text-red-600' : 'border-gray-200 text-gray-700'}`}>
+                                            {item.blood_type}
+                                        </div>
+                                        {item.units < 5 && (
+                                            <AlertTriangle className="h-5 w-5 text-red-500" />
+                                        )}
                                     </div>
-                                    {item.units < 5 && (
-                                        <AlertTriangle className="h-5 w-5 text-red-500" />
-                                    )}
-                                </div>
-                            </CardHeader>
-                            <CardContent>
-                                <div className="flex items-baseline space-x-1">
-                                    <span className="text-3xl font-bold text-gray-900">{item.units}</span>
-                                    <span className="text-sm text-gray-500">units</span>
-                                </div>
-                                {item.expiry_soon > 0 && (
-                                    <p className="text-xs text-amber-600 mt-2 font-medium">
-                                        ⚠️ {item.expiry_soon} expiring soon
-                                    </p>
-                                )}
-                            </CardContent>
-                        </Card>
-                    ))}
+                                </CardHeader>
+                                <CardContent>
+                                    <div className="flex items-baseline space-x-1">
+                                        <span className="text-3xl font-bold text-gray-900">{item.units}</span>
+                                        <span className="text-sm text-gray-500">units</span>
+                                    </div>
+                                </CardContent>
+                            </Card>
+                        ))
+                    )}
                 </div>
             </div>
         </div>

@@ -1,7 +1,7 @@
 import { Hono } from "hono";
 import { db } from "../db/index.js";
 import { bloodRequests } from "../db/schema.js";
-import { desc } from "drizzle-orm";
+import { desc, eq } from "drizzle-orm";
 
 export const bloodRequestsRouter = new Hono();
 
@@ -20,6 +20,7 @@ bloodRequestsRouter.get("/", async (c) => {
 bloodRequestsRouter.post("/", async (c) => {
     try {
         const body = await c.req.json();
+        console.log("Creating Blood Request, Body:", body);
         const { patient_name, blood_type, units_needed, hospital_name, location, contact_number, urgency, requester_id } = body;
 
         if (!patient_name || !blood_type || !units_needed || !hospital_name || !contact_number) {
@@ -59,5 +60,80 @@ bloodRequestsRouter.post("/", async (c) => {
             return c.json({ error: "Invalid ID format. Please log out and back in." }, 400);
         }
         return c.json({ error: "Failed to create request" }, 500);
+    }
+});
+
+// Get a single request
+bloodRequestsRouter.get("/:id", async (c) => {
+    try {
+        const id = c.req.param("id");
+        const request = await db.select().from(bloodRequests).where(eq(bloodRequests.id, id));
+
+        if (request.length === 0) {
+            return c.json({ error: "Request not found" }, 404);
+        }
+
+        return c.json(request[0]);
+    } catch (error) {
+        console.error("Error fetching request:", error);
+        return c.json({ error: "Failed to fetch request" }, 500);
+    }
+});
+
+// Update a request
+bloodRequestsRouter.put("/:id", async (c) => {
+    try {
+        const id = c.req.param("id");
+        const body = await c.req.json();
+        const { patient_name, blood_type, units_needed, hospital_name, location, contact_number, urgency, status } = body;
+
+        // Verify request exists
+        const existingRequest = await db.select().from(bloodRequests).where(eq(bloodRequests.id, id));
+        if (existingRequest.length === 0) {
+            return c.json({ error: "Request not found" }, 404);
+        }
+
+        let updateData: any = {
+            patient_name,
+            blood_type,
+            hospital_name,
+            location,
+            contact_number,
+            urgency,
+            status
+        };
+
+        if (units_needed) {
+            updateData.units_needed = parseInt(units_needed);
+        }
+
+        const updatedRequest = await db.update(bloodRequests)
+            .set(updateData)
+            .where(eq(bloodRequests.id, id))
+            .returning();
+
+        return c.json(updatedRequest[0]);
+    } catch (error) {
+        console.error("Error updating request:", error);
+        return c.json({ error: "Failed to update request" }, 500);
+    }
+});
+
+// Delete a request
+bloodRequestsRouter.delete("/:id", async (c) => {
+    try {
+        const id = c.req.param("id");
+
+        const existingRequest = await db.select().from(bloodRequests).where(eq(bloodRequests.id, id));
+        if (existingRequest.length === 0) {
+            return c.json({ error: "Request not found" }, 404);
+        }
+
+        await db.delete(bloodRequests).where(eq(bloodRequests.id, id));
+
+        return c.json({ message: "Request deleted successfully" });
+    } catch (error) {
+        console.error("Error deleting request:", error);
+        return c.json({ error: "Failed to delete request" }, 500);
     }
 });
