@@ -70,18 +70,22 @@ cd Blood_Bank_Management_system
 ```
 ### 3. Install dependencies
 Backend:
-
+```bash
 pip install -r requirements.txt
+```
 Frontend:
-
+```bash
 npm install
+```
 ### 4. Run the project
 Backend:
-
+```bash
 python main.py
+```
 Frontend:
-
+```bash
 npm start
+```
 ### 📸 Project Preview
 <p align="center"> <img src="https://media.giphy.com/media/3o7aD2saalBwwftBIY/giphy.gif" width="500"> </p>
 
