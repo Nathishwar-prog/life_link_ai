@@ -36,38 +36,41 @@ searchRouter.post("/", async (c) => {
             bb.address,
             bb.contact_number,
             ST_Distance(
-                ST_SetSRID(ST_MakePoint(bb.longitude, bb.latitude), 4326)::geography, 
+                ST_SetSRID(ST_MakePoint(bb.longitude, bb.latitude), 4326)::geography,
                 ST_SetSRID(ST_MakePoint(${lon}, ${lat}), 4326)::geography
             ) / 1000 as distance_km,
-            (
-                SELECT jsonb_object_agg(blood_type, units_available)
-                FROM blood_inventory
-                WHERE blood_bank_id = bb.id
-            ) as full_inventory,
-            (
-                SELECT units_available 
-                FROM blood_inventory 
-                WHERE blood_bank_id = bb.id AND blood_type = ${blood_type}
-            ) as requested_units
+            bi.units_available,
+            bi.last_updated
         FROM blood_banks bb
+        JOIN blood_inventory bi ON bb.id = bi.blood_bank_id
         WHERE bb.is_active = true
-          AND EXISTS (
-              SELECT 1 FROM blood_inventory 
-              WHERE blood_bank_id = bb.id 
-              AND blood_type = ${blood_type} 
-              AND units_available > 0
-          )
+          AND bi.blood_type = ${blood_type}
+          AND bi.units_available > 0
     `;
 
-        const result = await db.execute(query);
+        let result;
+        try {
+            result = await db.execute(query);
+        } catch (dbErr) {
+            console.error("DB Execution Error:", dbErr);
+            const errObj = JSON.parse(JSON.stringify(dbErr, Object.getOwnPropertyNames(dbErr)));
+            return c.json({ error: "Database Query Failed", details: String(dbErr), debug: errObj }, 500);
+        }
 
-        let rows = result.rows.map((row: any) => ({
-            ...row,
-            distance_km: parseFloat(row.distance_km.toFixed(2)),
-            eta_minutes: Math.round(row.distance_km * 2.5),
-            inventory: row.full_inventory || {},
-            units_available: row.requested_units || 0
-        }));
+        let rows = [];
+        try {
+            rows = result.rows.map((row: any) => ({
+                ...row,
+                distance_km: parseFloat(Number(row.distance_km).toFixed(2)),
+                eta_minutes: Math.round(Number(row.distance_km) * 2.5),
+                // inventory: {}, // Not needed for frontend map
+                units_available: row.units_available || 0,
+                updated_at: row.last_updated || null
+            }));
+        } catch (mapErr) {
+            console.error("Mapping Error:", mapErr);
+            return c.json({ error: "Search Mapping Failed", details: String(mapErr) }, 500);
+        }
 
         if (sort_by === 'eta') {
             rows.sort((a, b) => a.eta_minutes - b.eta_minutes);

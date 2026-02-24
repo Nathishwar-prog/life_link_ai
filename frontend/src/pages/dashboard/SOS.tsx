@@ -3,12 +3,14 @@ import { Button } from '../../components/ui/Button';
 import { Card, CardContent, CardHeader, CardTitle } from '../../components/ui/Card';
 import { AlertTriangle, MapPin, Loader2, Megaphone } from 'lucide-react';
 import { useNotification } from '../../context/NotificationContext';
+import { useAuth } from '../../context/AuthContext'; // Added import
 
 export function SOS() {
     const [loading, setLoading] = useState(false);
     const [countdown, setCountdown] = useState(0);
     const [location, setLocation] = useState<{ lat: number; lng: number } | null>(null);
     const { addNotification } = useNotification();
+    const { token } = useAuth(); // Get token from context
 
     useEffect(() => {
         if (navigator.geolocation) {
@@ -45,21 +47,32 @@ export function SOS() {
         }, 1000);
     };
 
+
+
     const triggerSOS = async () => {
         if (!location) return;
+
+        console.log("SOS: Triggering with token:", token ? "Token exists" : "Token is MISSING");
+
         try {
-            const res = await fetch('http://localhost:8000/api/requests/sos', {
+            const res = await fetch('http://localhost:8000/api/sos', { // Fixed endpoint
                 method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
+                headers: {
+                    'Content-Type': 'application/json',
+                    'Authorization': `Bearer ${token}` // Added Auth
+                },
                 body: JSON.stringify({
                     latitude: location.lat,
                     longitude: location.lng,
-                    blood_type: "Any", // Default to any/urgent
-                    note: "Emergency SOS triggered by user"
+                    message: "Emergency SOS triggered by user" // Changed key to 'message' to match backend
                 })
             });
             const data = await res.json();
-            addNotification(data.message, "success");
+            if (res.ok) {
+                addNotification(data.message, "success");
+            } else {
+                addNotification(data.message || "Failed to send SOS", "error");
+            }
         } catch (error) {
             addNotification("Failed to send SOS", "error");
         } finally {

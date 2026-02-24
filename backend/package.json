@@ -24,7 +24,8 @@
     "drizzle-orm": "^0.45.1",
     "hono": "^4.11.9",
     "jsonwebtoken": "^9.0.3",
-    "pg": "^8.18.0"
+    "pg": "^8.18.0",
+    "twilio": "^5.12.2"
   },
   "devDependencies": {
     "@types/bcryptjs": "^2.4.6",
