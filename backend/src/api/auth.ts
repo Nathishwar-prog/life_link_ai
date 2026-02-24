@@ -10,7 +10,6 @@ const { hash, compare } = bcrypt;
 
 
 export const authRouter = new Hono();
-const SECRET_KEY = process.env.JWT_SECRET || "fallback-secret-key";
 
 authRouter.post("/register", async (c) => {
     const { email, password, full_name, role } = await c.req.json();
@@ -43,6 +42,7 @@ authRouter.post("/login", async (c) => {
         return c.json({ detail: "Invalid credentials" }, 401);
     }
 
+    const SECRET_KEY = process.env.JWT_SECRET || "fallback-secret-key";
     const token = sign(
         { sub: user.id, role: user.role },
         SECRET_KEY,
