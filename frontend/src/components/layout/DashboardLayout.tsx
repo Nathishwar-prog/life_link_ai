@@ -19,6 +19,7 @@ import {
     CreditCard
 } from 'lucide-react';
 import { cn } from '../../lib/utils';
+import { FloatingChat } from '../FloatingChat';
 
 export function DashboardLayout() {
     const { user, logout } = useAuth();
@@ -206,6 +207,9 @@ export function DashboardLayout() {
                     </div>
                 </div>
             )}
+
+            {/* Global AI Chatbot Widget */}
+            <FloatingChat />
         </div>
     );
 }

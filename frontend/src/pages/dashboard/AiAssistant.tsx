@@ -55,7 +55,10 @@ export function AiAssistant() {
                     'Content-Type': 'application/json',
                     'Authorization': `Bearer ${localStorage.getItem('token')}` // Although endpoint might be public or protected, good practice
                 },
-                body: JSON.stringify({ message: userMessage.content })
+                body: JSON.stringify({
+                    message: userMessage.content,
+                    history: messages.slice(1) // exclude the first system welcome message from the history sent to backend
+                })
             });
 
             const data = await response.json();

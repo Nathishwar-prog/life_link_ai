@@ -6,9 +6,11 @@ import { sql } from "drizzle-orm";
 
 export const aiRouter = new Hono();
 
-// Initialize Gemini
-const genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY || "");
-const model = genAI.getGenerativeModel({ model: "gemini-pro" });
+// Initialize Gemini lazily to avoid ES module import hoisting issues with dotenv
+const getModel = () => {
+    const genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY || "");
+    return genAI.getGenerativeModel({ model: "gemini-pro" });
+};
 
 aiRouter.post("/predict-shortage", async (c) => {
     try {
@@ -39,7 +41,7 @@ aiRouter.post("/predict-shortage", async (c) => {
             Do not include markdown formatting, just raw JSON.
         `;
 
-        const result = await model.generateContent(prompt);
+        const result = await getModel().generateContent(prompt);
         const response = await result.response;
         const text = response.text();
 
@@ -55,21 +57,29 @@ aiRouter.post("/predict-shortage", async (c) => {
 
 aiRouter.post("/donor-chat", async (c) => {
     try {
-        const { message, context } = await c.req.json();
+        const { message, history } = await c.req.json();
 
-        const chat = model.startChat({
+        // format history for gemini if provided
+        // type the msg to any since we just need role and content
+        const formattedHistory = history ? history.map((msg: any) => ({
+            role: msg.role === 'assistant' ? 'model' : 'user',
+            parts: [{ text: msg.content }]
+        })) : [];
+
+        const chat = getModel().startChat({
             history: [
                 {
                     role: "user",
-                    parts: [{ text: "You are a helpful medical assistant for a Blood Bank. Answer questions about blood donation eligibility, process, and after-care. Be encouraging but medically accurate. If unsure, advise seeing a doctor." }],
+                    parts: [{ text: "You are a helpful medical assistant for a Blood Bank. Please provide medical suggestions and answer questions about blood-related topics (like donation eligibility, process, test results, after-care). Be encouraging but medically accurate. If unsure, advise seeing a doctor." }],
                 },
                 {
                     role: "model",
-                    parts: [{ text: "Understood. I will assist donors with their queries regarding blood donation." }],
-                }
+                    parts: [{ text: "Understood. I will assist donors with their medical queries and questions regarding blood donation." }],
+                },
+                ...formattedHistory
             ],
             generationConfig: {
-                maxOutputTokens: 200,
+                maxOutputTokens: 500,
             },
         });
 

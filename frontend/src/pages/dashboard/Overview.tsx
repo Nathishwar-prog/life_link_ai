@@ -8,8 +8,10 @@ import { InventoryChart } from '../../components/dashboard/InventoryChart';
 import { GoalChart } from '../../components/dashboard/GoalChart';
 import { RecentActivity } from '../../components/dashboard/RecentActivity';
 import { Button } from '../../components/ui/Button';
+import { useAuth } from '../../context/AuthContext';
 
 export function Overview() {
+    const { user } = useAuth();
     const [inventoryData, setInventoryData] = useState<{ blood_type: string; units: number }[]>([]);
     const [totalUnits, setTotalUnits] = useState(0);
     const [activeDonors, setActiveDonors] = useState(0);
@@ -58,7 +60,7 @@ export function Overview() {
                         animate={{ opacity: 1, x: 0 }}
                         className="text-3xl font-bold bg-clip-text text-transparent bg-gradient-to-r from-red-600 to-rose-400"
                     >
-                        Welcome Back, Admin
+                        Welcome Back, {user?.full_name || user?.role || 'Admin'}
                     </motion.h1>
                     <motion.p
                         initial={{ opacity: 0 }}

@@ -1,5 +1,5 @@
 
-import { useState, useEffect } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Button } from '../../components/ui/Button';
 import { Input } from '../../components/ui/Input';
 import { Card, CardContent, CardHeader, CardTitle } from '../../components/ui/Card';
@@ -82,6 +82,23 @@ export function Donors() {
 
     const handleSave = async (e: React.FormEvent) => {
         e.preventDefault();
+
+        // Validations
+        if (/\d/.test(currentDonor.full_name || '')) {
+            addNotification("Name cannot contain numbers", "error");
+            return;
+        }
+
+        if (/\d/.test(currentDonor.city || '')) {
+            addNotification("City cannot contain numbers", "error");
+            return;
+        }
+
+        if (!/^\+?[\d\s-]{8,}$/.test(currentDonor.phone_number || '')) {
+            addNotification("Please enter a valid phone number", "error");
+            return;
+        }
+
         setIsSaving(true);
         try {
             const url = isEditing
@@ -199,8 +216,8 @@ export function Donors() {
                                 <div className="flex justify-between items-start">
                                     <div className="flex items-center gap-3">
                                         <div className={`h-12 w-12 rounded-full flex items-center justify-center text-white font-bold shadow-md ${['O+', 'O-'].includes(donor.blood_type) ? 'bg-gradient-to-br from-red-500 to-rose-600' :
-                                                ['A+', 'A-'].includes(donor.blood_type) ? 'bg-gradient-to-br from-blue-500 to-indigo-600' :
-                                                    'bg-gradient-to-br from-purple-500 to-violet-600'
+                                            ['A+', 'A-'].includes(donor.blood_type) ? 'bg-gradient-to-br from-blue-500 to-indigo-600' :
+                                                'bg-gradient-to-br from-purple-500 to-violet-600'
                                             }`}>
                                             {donor.blood_type}
                                         </div>
