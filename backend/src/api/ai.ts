@@ -9,7 +9,7 @@ export const aiRouter = new Hono();
 // Initialize Gemini lazily to avoid ES module import hoisting issues with dotenv
 const getModel = () => {
     const genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY || "");
-    return genAI.getGenerativeModel({ model: "gemini-pro" });
+    return genAI.getGenerativeModel({ model: "gemini-2.5-flash" });
 };
 
 aiRouter.post("/predict-shortage", async (c) => {
@@ -70,24 +70,53 @@ aiRouter.post("/donor-chat", async (c) => {
             history: [
                 {
                     role: "user",
-                    parts: [{ text: "You are a helpful medical assistant for a Blood Bank. Please provide medical suggestions and answer questions about blood-related topics (like donation eligibility, process, test results, after-care). Be encouraging but medically accurate. If unsure, advise seeing a doctor." }],
+                    parts: [{ text: "You are a helpful and professional medical assistant for a Blood Bank. Your ONLY purpose is to answer questions about blood donation eligibility, the blood donation process, after-care, and general health tips related to blood and wellbeing. You MUST absolutely refuse to answer any questions that are not related to healthcare, medicine, or blood donation. If the user asks about programming, general knowledge, or anything outside your strict medical scope, respond politely stating that you are a specialized health assistant and can only answer health-related queries. Be encouraging but medically accurate. Important Rule: Keep your responses extremely short, punchy, and fast to read (1-3 sentences maximum). Get straight to the point without any fluff." }],
                 },
                 {
                     role: "model",
-                    parts: [{ text: "Understood. I will assist donors with their medical queries and questions regarding blood donation." }],
+                    parts: [{ text: "Understood. I will provide short, quick, and concise assistance for blood donation queries." }],
                 },
                 ...formattedHistory
             ],
             generationConfig: {
-                maxOutputTokens: 500,
+                maxOutputTokens: 800,
             },
         });
 
-        const result = await chat.sendMessage(message);
-        const response = await result.response;
-        return c.json({ reply: response.text() });
-    } catch (error) {
+        const delay = (ms: number) => new Promise(res => setTimeout(res, ms));
+        let retries = 3;
+        let responseText = "";
+
+        while (retries > 0) {
+            try {
+                const result = await chat.sendMessage(message);
+                const response = await result.response;
+                responseText = response.text();
+                break; // Success, exit loop
+            } catch (err: any) {
+                if (err.message && err.message.includes("503") && retries > 1) {
+                    console.log(`Gemini API 503 Error. Retrying in 1s... (${retries - 1} attempts left)`);
+                    await delay(1000);
+                    retries--;
+                } else {
+                    throw err; // Re-throw if it's not a 503 or we're out of retries
+                }
+            }
+        }
+
+        return c.json({ reply: responseText });
+    } catch (error: any) {
         console.error("AI Chat Error:", error);
-        return c.json({ error: "Failed to process message" }, 500);
+        let errorMsg = "Failed to process message";
+        if (error.message) {
+            if (error.message.includes("API key expired") || error.message.includes("API key not valid") || error.message.includes("API_KEY_INVALID")) {
+                errorMsg = "Your Gemini API Key is invalid or expired. Please update it in the .env file.";
+            } else if (error.message.includes("quota")) {
+                errorMsg = "Gemini API quota exceeded.";
+            } else {
+                errorMsg = `AI Error: ${error.message}`;
+            }
+        }
+        return c.json({ error: errorMsg }, 500);
     }
 });

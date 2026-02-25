@@ -1,0 +1,106 @@
+﻿[dotenv@17.2.4] injecting env (6) from ..\.env -- tip: ΓÜÖ∩╕Å  write to custom object with { processEnv: myObject }
+Starting chat...
+node.exe : AI Chat 
+Error: GoogleGenerative
+AIFetchError: 
+[GoogleGenerativeAI 
+Error]: Error fetching 
+from https://generative
+language.googleapis.com
+/v1beta/models/gemini-1
+.5-flash:generateConten
+t: [400 Bad Request] 
+API key expired. 
+Please renew the API 
+key. [{"@type":"type.go
+ogleapis.com/google.rpc
+.ErrorInfo","reason":"A
+PI_KEY_INVALID","domain
+":"googleapis.com","met
+adata":{"service":"gene
+rativelanguage.googleap
+is.com"}},{"@type":"typ
+e.googleapis.com/google
+.rpc.LocalizedMessage",
+"locale":"en-US","messa
+ge":"API key expired. 
+Please renew the API 
+key."}]
+At line:1 char:1
++ & "C:\Program 
+Files\nodejs/node.exe" 
+"C:\Program 
+Files\nodejs/node_mo 
+...
++ ~~~~~~~~~~~~~~~~~~~~~
+~~~~~~~~~~~~~~~~~~~~~~~
+~~~~~~~~~~~~~~~~~~~~~~~
+~~
+    + CategoryInfo     
+         : NotSpecifi  
+  ed: (AI Chat Error   
+ : ...the API key."    
+}]:String) [], Rem    
+oteException
+    + FullyQualifiedEr 
+   rorId : NativeComm  
+  andError
+ 
+    at 
+handleResponseNotOk (fi
+le:///G:/New%20folder/l
+ife_link_ai/node_module
+s/@google/generative-ai
+/dist/index.mjs:432:11)
+    at process.processT
+icksAndRejections (node
+:internal/process/task_
+queues:103:5)
+    at async 
+makeRequest (file:///G:
+/New%20folder/life_link
+_ai/node_modules/@googl
+e/generative-ai/dist/in
+dex.mjs:401:9)
+    at async 
+generateContent (file:/
+//G:/New%20folder/life_
+link_ai/node_modules/@g
+oogle/generative-ai/dis
+t/index.mjs:865:22)
+    at async ChatSessio
+n.sendMessage (file:///
+G:/New%20folder/life_li
+nk_ai/node_modules/@goo
+gle/generative-ai/dist/
+index.mjs:1208:9)
+    at async run 
+(G:\New folder\life_lin
+k_ai\backend\test_gemin
+i.ts:27:24) {
+  status: 400,
+  statusText: 'Bad 
+Request',
+  errorDetails: [
+    {
+      '@type': 'type.go
+ogleapis.com/google.rpc
+.ErrorInfo',
+      reason: 
+'API_KEY_INVALID',
+      domain: 
+'googleapis.com',
+      metadata: 
+[Object]
+    },
+    {
+      '@type': 'type.go
+ogleapis.com/google.rpc
+.LocalizedMessage',
+      locale: 'en-US',
+      message: 'API 
+key expired. Please 
+renew the API key.'
+    }
+  ]
+}
