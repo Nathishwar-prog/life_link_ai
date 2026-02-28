@@ -16,6 +16,7 @@ import { donorsRouter } from "./api/donors.js";
 import { bloodRequestsRouter } from "./api/blood-requests.js";
 import { inventoryRouter } from "./api/inventory.js";
 import { sosRouter } from "./api/sos.js";
+import { donationsRouter } from "./api/donations.js";
 
 import { initDB } from "./db/index.js";
 
@@ -35,6 +36,7 @@ app.route("/api/donors", donorsRouter);
 app.route("/api/blood-requests", bloodRequestsRouter);
 app.route("/api/inventory", inventoryRouter);
 app.route("/api/sos", sosRouter);
+app.route("/api/donations", donationsRouter);
 
 const port = 8000;
 console.log("Starting server...");

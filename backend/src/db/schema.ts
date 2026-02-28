@@ -65,6 +65,19 @@ export const donors = pgTable("donors", {
 
 export const bloodRequestsEnum = pgEnum("request_status", ["PENDING", "FULFILLED", "CANCELLED"]);
 
+export const donationStatusEnum = pgEnum("donation_status", ["PENDING", "COMPLETED", "CANCELLED"]);
+
+export const donations = pgTable("donations", {
+    id: uuid("id").defaultRandom().primaryKey(),
+    user_id: uuid("user_id").references(() => users.id).notNull(),
+    location: text("location").notNull(),
+    date: text("date").notNull(),
+    time: text("time").notNull(),
+    amount: text("amount").default("450ml"),
+    status: donationStatusEnum("status").default("PENDING"),
+    created_at: timestamp("created_at").defaultNow(),
+});
+
 export const bloodRequests = pgTable("blood_requests", {
     id: uuid("id").defaultRandom().primaryKey(),
     patient_name: text("patient_name").notNull(),

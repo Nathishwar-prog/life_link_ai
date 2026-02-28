@@ -61,6 +61,11 @@ export function AiAssistant() {
                 })
             });
 
+            if (!response.ok) {
+                const errorData = await response.json().catch(() => ({}));
+                throw new Error(errorData.error || "Failed to communicate with AI server");
+            }
+
             const data = await response.json();
 
             const assistantMessage: Message = {
@@ -70,12 +75,12 @@ export function AiAssistant() {
             };
 
             setMessages(prev => [...prev, assistantMessage]);
-        } catch (error) {
+        } catch (error: any) {
             console.error("Chat error:", error);
             setMessages(prev => [...prev, {
                 id: (Date.now() + 1).toString(),
                 role: 'assistant',
-                content: "Sorry, I'm having trouble connecting to the server. Please try again later."
+                content: error.message || "Sorry, I'm having trouble connecting to the server. Please try again later."
             }]);
         } finally {
             setIsLoading(false);

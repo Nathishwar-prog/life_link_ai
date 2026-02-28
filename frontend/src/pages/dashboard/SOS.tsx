@@ -3,6 +3,7 @@ import { Button } from '../../components/ui/Button';
 import { Card, CardContent, CardHeader, CardTitle } from '../../components/ui/Card';
 import { AlertTriangle, MapPin, Loader2, Megaphone } from 'lucide-react';
 import { useNotification } from '../../context/NotificationContext';
+import { Navigate } from 'react-router-dom';
 import { useAuth } from '../../context/AuthContext'; // Added import
 
 export function SOS() {
@@ -10,7 +11,11 @@ export function SOS() {
     const [countdown, setCountdown] = useState(0);
     const [location, setLocation] = useState<{ lat: number; lng: number } | null>(null);
     const { addNotification } = useNotification();
-    const { token } = useAuth(); // Get token from context
+    const { token, user } = useAuth(); // Get token from context
+
+    if (user && user.role !== 'ADMIN' && user.role !== 'STAFF') {
+        return <Navigate to="/dashboard" replace />;
+    }
 
     useEffect(() => {
         if (navigator.geolocation) {

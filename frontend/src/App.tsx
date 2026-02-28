@@ -13,6 +13,7 @@ import { AiAssistant } from './pages/dashboard/AiAssistant';
 import { SOS } from './pages/dashboard/SOS';
 import { Campaigns } from './pages/dashboard/Campaigns';
 import { DonorCard } from './pages/dashboard/DonorCard';
+import { PatientCard } from './pages/dashboard/PatientCard';
 
 import { Donors } from './pages/dashboard/Donors';
 import { Requests } from './pages/dashboard/Requests';
@@ -40,6 +41,7 @@ function App() {
                 <Route path="sos" element={<SOS />} />
                 <Route path="campaigns" element={<Campaigns />} />
                 <Route path="donor-card" element={<DonorCard />} />
+                <Route path="patient-card" element={<PatientCard />} />
                 <Route path="donors" element={<Donors />} />
                 <Route path="requests" element={<Requests />} />
               </Route>

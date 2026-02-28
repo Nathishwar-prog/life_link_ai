@@ -48,15 +48,26 @@ export function DashboardLayout() {
         }
 
         // Donor navigation
+        if (role === 'DONOR') {
+            return [
+                { name: 'Overview', href: '/dashboard', icon: LayoutDashboard },
+                { name: 'Search Blood', href: '/dashboard/search', icon: Search },
+                { name: 'Campaigns', href: '/dashboard/campaigns', icon: Tent },
+                { name: 'My Donations', href: '/dashboard/my-donations', icon: History },
+                { name: 'Donor Card', href: '/dashboard/donor-card', icon: CreditCard },
+                { name: 'Requests', href: '/dashboard/requests', icon: FileText },
+                { name: 'AI Assistant', href: '/dashboard/ai-assistant', icon: Bot },
+            ];
+        }
+
+        // Patient navigation
         return [
             { name: 'Overview', href: '/dashboard', icon: LayoutDashboard },
             { name: 'Search Blood', href: '/dashboard/search', icon: Search },
             { name: 'Campaigns', href: '/dashboard/campaigns', icon: Tent },
-            { name: 'My Donations', href: '/dashboard/my-donations', icon: History },
-            { name: 'Donor Card', href: '/dashboard/donor-card', icon: CreditCard },
+            { name: 'Patient Card', href: '/dashboard/patient-card', icon: CreditCard },
             { name: 'Requests', href: '/dashboard/requests', icon: FileText },
             { name: 'AI Assistant', href: '/dashboard/ai-assistant', icon: Bot },
-            { name: 'SOS', href: '/dashboard/sos', icon: Siren },
         ];
     };
 
