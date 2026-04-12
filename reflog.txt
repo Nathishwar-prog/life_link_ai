@@ -1,0 +1,4 @@
+ef495f5 HEAD@{0}: pull origin main: Merge made by the 'ort' strategy.
+87cc1e4 HEAD@{1}: commit: Fix campaign creation, JWT decoding bugs, delete option and script imports
+d2adc3d HEAD@{2}: commit: feat(donations,patient-card): Implement donations API, DB tables, and Patient Card
+c85d822 HEAD@{3}: clone: from https://github.com/Nathishwar-prog/life_link_ai.git

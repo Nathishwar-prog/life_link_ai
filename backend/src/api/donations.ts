@@ -18,8 +18,12 @@ donationsRouter.get("/my-donations", async (c) => {
         const token = authHeader.split(" ")[1];
         if (!token) return c.json({ error: "Unauthorized" }, 401);
 
-        const decoded = jwt.verify(token, process.env.JWT_SECRET || "fallback_secret") as { id: string };
-        const userId = decoded.id;
+        const decoded = jwt.verify(token, process.env.JWT_SECRET || "fallback_secret") as { sub?: string, id?: string };
+        const userId = decoded.sub || decoded.id;
+
+        if (!userId) {
+            return c.json({ error: "Invalid token payload" }, 401);
+        }
 
         const userDonations = await db.select()
             .from(donations)
@@ -42,8 +46,12 @@ donationsRouter.post("/schedule", async (c) => {
         const token = authHeader.split(" ")[1];
         if (!token) return c.json({ error: "Unauthorized" }, 401);
 
-        const decoded = jwt.verify(token, process.env.JWT_SECRET || "fallback_secret") as { id: string };
-        const userId = decoded.id;
+        const decoded = jwt.verify(token, process.env.JWT_SECRET || "fallback_secret") as { sub?: string, id?: string };
+        const userId = decoded.sub || decoded.id;
+
+        if (!userId) {
+            return c.json({ error: "Invalid token payload" }, 401);
+        }
 
         const body = await c.req.json();
         const { date, location, time } = body;
