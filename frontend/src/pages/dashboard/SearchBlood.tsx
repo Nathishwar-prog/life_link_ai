@@ -70,15 +70,32 @@ interface BloodBankResult {
     updated_at?: string;
 }
 
+interface DonorResult {
+    id: string;
+    full_name: string;
+    blood_type: string;
+    latitude: number;
+    longitude: number;
+    distance_km: number;
+    phone_number: string;
+}
+
 export function SearchBlood() {
     const [bloodType, setBloodType] = useState('O+');
     const [location, setLocation] = useState<{ lat: number; lng: number } | null>(null);
     const [results, setResults] = useState<BloodBankResult[]>([]);
+    const [donorResults, setDonorResults] = useState<DonorResult[]>([]);
+    const [searchAddress, setSearchAddress] = useState('');
+    const [searchingAddress, setSearchingAddress] = useState(false);
+    const [showDonors, setShowDonors] = useState(true);
     const [loading, setLoading] = useState(false);
     const [selectedBankId, setSelectedBankId] = useState<string | null>(null);
+    const [selectedDonorId, setSelectedDonorId] = useState<string | null>(null);
     const [autoRefresh, setAutoRefresh] = useState(false);
+    const [isSharingLocation, setIsSharingLocation] = useState(false);
     const [lastUpdated, setLastUpdated] = useState<Date | null>(null);
     const intervalRef = useRef<NodeJS.Timeout | null>(null);
+    const shareIntervalRef = useRef<NodeJS.Timeout | null>(null);
 
     // Initial location fetch
     useEffect(() => {
@@ -99,22 +116,34 @@ export function SearchBlood() {
         }
     }, []);
 
-    const fetchBloodBanks = async () => {
+    const fetchResults = async (cityOverride?: string) => {
         if (!location) return;
         setLoading(true);
         try {
-            const res = await fetch('http://localhost:8000/api/search-blood', {
+            // ... (blood bank fetch remains same) ...
+            const bankRes = await fetch('http://localhost:8000/api/search-blood', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({
                     latitude: location.lat,
                     longitude: location.lng,
                     blood_type: bloodType,
-                    // Optional: radius or other params
                 })
             });
-            const data = await res.json();
-            setResults(data.results || []);
+            
+            if (bankRes.ok) {
+                const bankData = await bankRes.json();
+                setResults(bankData.results || []);
+            }
+
+            // Fetch Donors with city fallback
+            const cityParam = cityOverride ? `&city=${encodeURIComponent(cityOverride)}` : '';
+            const donorRes = await fetch(`http://localhost:8000/api/donors?lat=${location.lat}&lon=${location.lng}&blood_type=${encodeURIComponent(bloodType)}&radius=50${cityParam}`);
+            if (donorRes.ok) {
+                const donorData = await donorRes.json();
+                setDonorResults(Array.isArray(donorData) ? donorData : []);
+            }
+
             setLastUpdated(new Date());
         } catch (error) {
             console.error("Search failed:", error);
@@ -123,16 +152,77 @@ export function SearchBlood() {
         }
     };
 
+    const handleAddressSearch = async () => {
+        if (!searchAddress) return;
+        setSearchingAddress(true);
+        try {
+            const res = await fetch(`https://nominatim.openstreetmap.org/search?format=json&q=${encodeURIComponent(searchAddress)}&limit=1&addressdetails=1`);
+            const data = await res.json();
+            if (data && data.length > 0) {
+                const newLoc = { lat: parseFloat(data[0].lat), lng: parseFloat(data[0].lon) };
+                setLocation(newLoc);
+                
+                // Extract city/town/village name for backend filtering
+                const addr = data[0].address;
+                const cityName = addr.city || addr.town || addr.village || addr.suburb || addr.county;
+                
+                fetchResults(cityName);
+            }
+        } catch (error) {
+            console.error("Address search failed:", error);
+        } finally {
+            setSearchingAddress(false);
+        }
+    };
+
+    const toggleLocationSharing = () => {
+        if (isSharingLocation) {
+            if (shareIntervalRef.current) clearInterval(shareIntervalRef.current);
+            setIsSharingLocation(false);
+        } else {
+            setIsSharingLocation(true);
+            // Ideally we get donor ID from auth context, for now assuming a mock or finding one
+            startSharing('donor-mock-id'); 
+        }
+    };
+
+    const startSharing = (donorId: string) => {
+        const share = async () => {
+            if (navigator.geolocation) {
+                navigator.geolocation.getCurrentPosition(async (pos) => {
+                    const { latitude, longitude } = pos.coords;
+                    try {
+                        await fetch(`http://localhost:8000/api/donors/${donorId}/location`, {
+                            method: 'PATCH',
+                            headers: { 'Content-Type': 'application/json' },
+                            body: JSON.stringify({ latitude, longitude })
+                        });
+                    } catch (e) {
+                        console.error("Failed to share location:", e);
+                    }
+                });
+            }
+        };
+        share();
+        shareIntervalRef.current = setInterval(share, 10000); // Update every 10s
+    };
+
+    useEffect(() => {
+        return () => {
+            if (shareIntervalRef.current) clearInterval(shareIntervalRef.current);
+        };
+    }, []);
+
     // Manual search trigger
     const handleSearch = () => {
-        fetchBloodBanks();
+        fetchResults();
     };
 
     // Auto-refresh logic
     useEffect(() => {
         if (autoRefresh) {
-            fetchBloodBanks(); // Initial fetch on enable
-            intervalRef.current = setInterval(fetchBloodBanks, 30000); // 30s poll
+            fetchResults(); // Initial fetch on enable
+            intervalRef.current = setInterval(fetchResults, 30000); // 30s poll
         } else {
             if (intervalRef.current) clearInterval(intervalRef.current);
         }
@@ -180,6 +270,19 @@ export function SearchBlood() {
                             </div>
                         </div>
 
+                        <div className="relative">
+                            <input
+                                type="text"
+                                value={searchAddress}
+                                onChange={(e) => setSearchAddress(e.target.value)}
+                                placeholder="Search address or city..."
+                                className="w-full pl-10 pr-4 py-3 bg-gray-50 border border-gray-200 rounded-xl focus:ring-2 focus:ring-red-500 focus:border-transparent outline-none transition-all"
+                                onKeyDown={(e) => e.key === 'Enter' && handleAddressSearch()}
+                            />
+                            <Search className="absolute left-3 top-3.5 h-5 w-5 text-gray-400" />
+                            {searchingAddress && <Loader2 className="absolute right-3 top-3.5 h-4 w-4 animate-spin text-red-500" />}
+                        </div>
+
                         <div className="space-y-2">
                             <label className="text-sm font-semibold text-gray-700 ml-1">Select Blood Type</label>
                             <div className="grid grid-cols-4 gap-2">
@@ -200,19 +303,32 @@ export function SearchBlood() {
                             </div>
                         </div>
 
-                        <Button
-                            onClick={handleSearch}
-                            disabled={loading || !location}
-                            className="w-full h-12 text-base bg-gradient-to-r from-red-600 to-red-500 hover:from-red-700 hover:to-red-600 text-white shadow-xl shadow-red-200 rounded-xl transition-all duration-300 transform hover:translate-y-[-1px]"
-                        >
-                            {loading ? (
-                                <span className="flex items-center gap-2">
-                                    <Loader2 className="h-4 w-4 animate-spin" /> Scanning Network...
-                                </span>
-                            ) : (
-                                'Search Nearby Banks'
-                            )}
-                        </Button>
+                        <div className="flex gap-2">
+                            <Button
+                                onClick={handleSearch}
+                                disabled={loading || !location}
+                                className="flex-1 h-12 text-base bg-gradient-to-r from-red-600 to-red-500 hover:from-red-700 hover:to-red-600 text-white shadow-xl shadow-red-200 rounded-xl transition-all duration-300 transform hover:translate-y-[-1px]"
+                            >
+                                {loading ? (
+                                    <span className="flex items-center gap-2">
+                                        <Loader2 className="h-4 w-4 animate-spin" /> Scanning...
+                                    </span>
+                                ) : (
+                                    'Find Nearby'
+                                )}
+                            </Button>
+                            <Button
+                                onClick={toggleLocationSharing}
+                                variant="outline"
+                                className={cn(
+                                    "h-12 px-4 rounded-xl transition-all duration-300",
+                                    isSharingLocation ? "bg-green-50 border-green-200 text-green-700 animate-pulse" : "bg-white border-gray-200"
+                                )}
+                                title={isSharingLocation ? "Stop sharing live location" : "Share live location"}
+                            >
+                                <Navigation className={cn("h-5 w-5", isSharingLocation && "fill-current")} />
+                            </Button>
+                        </div>
 
                         {lastUpdated && (
                             <div className="text-xs text-center text-gray-400 flex items-center justify-center gap-1">
@@ -327,7 +443,7 @@ export function SearchBlood() {
                                 position={[bank.latitude, bank.longitude]}
                                 icon={createCustomIcon(bloodType, bank.units_available)}
                                 eventHandlers={{
-                                    click: () => setSelectedBankId(bank.id),
+                                    click: () => { setSelectedBankId(bank.id); setSelectedDonorId(null); },
                                 }}
                             >
                                 <Popup className="custom-popup" closeButton={false}>
@@ -340,6 +456,40 @@ export function SearchBlood() {
                                             )}>
                                                 {bank.units_available} Units Available
                                             </span>
+                                        </div>
+                                    </div>
+                                </Popup>
+                            </Marker>
+                        ))}
+
+                        {/* Donor Markers */}
+                        {showDonors && donorResults.map((donor) => (
+                            <Marker
+                                key={donor.id}
+                                position={[donor.latitude, donor.longitude]}
+                                icon={L.divIcon({
+                                    html: renderToStaticMarkup(
+                                        <div className="relative flex items-center justify-center w-8 h-8 bg-white border-2 border-red-500 rounded-full shadow-lg overflow-hidden">
+                                            <Droplet className="w-4 h-4 text-red-500 fill-current" />
+                                        </div>
+                                    ),
+                                    className: 'donor-marker',
+                                    iconSize: [32, 32],
+                                    iconAnchor: [16, 16]
+                                })}
+                                eventHandlers={{
+                                    click: () => { setSelectedDonorId(donor.id); setSelectedBankId(null); },
+                                }}
+                            >
+                                <Popup closeButton={false}>
+                                    <div className="p-2 min-w-[150px]">
+                                        <h3 className="font-bold text-gray-900">{donor.full_name}</h3>
+                                        <p className="text-xs text-red-600 font-bold uppercase mt-1">{donor.blood_type} Donor</p>
+                                        <div className="mt-3 pt-2 border-t border-gray-100 flex justify-between items-center">
+                                            <span className="text-[10px] text-gray-400">{donor.distance_km.toFixed(1)}km away</span>
+                                            <Button size="sm" className="h-6 text-[10px] px-2" onClick={() => handleCall(donor.phone_number)}>
+                                                Contact
+                                            </Button>
                                         </div>
                                     </div>
                                 </Popup>

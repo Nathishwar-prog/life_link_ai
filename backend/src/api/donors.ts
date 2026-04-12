@@ -16,6 +16,41 @@ donorsRouter.get("/", async (c) => {
         if (city) conditions.push(ilike(donors.city, `%${city}%`));
 
         const query = db.select().from(donors);
+        const lat = c.req.query("lat");
+        const lon = c.req.query("lon");
+        const radius = c.req.query("radius") || "50"; // Increased default radius to 50km
+
+        if (lat && lon) {
+            // Proximity search + City fallback search to ensure we catch donors without coords in same city
+            // First, let's try to get the city of the search location via reverse geocoding or just rely on proximity for now
+            // But if we want to BE SURE, we can search by proximity and ALSO by city if city is provided.
+            
+            const proximityQuery = sql`
+                SELECT *,
+                    CASE 
+                        WHEN latitude IS NOT NULL AND longitude IS NOT NULL THEN
+                            ST_Distance(
+                                ST_SetSRID(ST_MakePoint(longitude, latitude), 4326)::geography,
+                                ST_SetSRID(ST_MakePoint(${parseFloat(lon)}, ${parseFloat(lat)}), 4326)::geography
+                            ) / 1000
+                        ELSE NULL
+                    END as distance_km
+                FROM donors
+                WHERE is_available = true
+                ${bloodType ? sql`AND blood_type = ${bloodType}` : sql``}
+                AND (
+                    (latitude IS NOT NULL AND ST_Distance(
+                        ST_SetSRID(ST_MakePoint(longitude, latitude), 4326)::geography,
+                        ST_SetSRID(ST_MakePoint(${parseFloat(lon)}, ${parseFloat(lat)}), 4326)::geography
+                    ) <= ${parseFloat(radius) * 1000})
+                    OR 
+                    (city IS NOT NULL AND ${city ? sql`city ILIKE ${'%' + city + '%'}` : sql`FALSE`})
+                )
+                ORDER BY distance_km ASC NULLS LAST
+            `;
+            const results = await db.execute(proximityQuery);
+            return c.json(results.rows);
+        }
 
         if (conditions.length > 0) {
             // @ts-ignore - Drizzle specific type handling
@@ -28,6 +63,36 @@ donorsRouter.get("/", async (c) => {
     } catch (error) {
         console.error("Error fetching donors:", error);
         return c.json({ error: "Failed to fetch donors" }, 500);
+    }
+});
+
+// Update donor location
+donorsRouter.patch("/:id/location", async (c) => {
+    try {
+        const id = c.req.param("id");
+        const { latitude, longitude } = await c.req.json();
+
+        if (latitude === undefined || longitude === undefined) {
+            return c.json({ error: "Latitude and longitude are required" }, 400);
+        }
+
+        const updated = await db.update(donors)
+            .set({
+                latitude: parseFloat(latitude),
+                longitude: parseFloat(longitude),
+                last_location_update: new Date()
+            })
+            .where(eq(donors.id, id))
+            .returning();
+
+        if (updated.length === 0) {
+            return c.json({ error: "Donor not found" }, 404);
+        }
+
+        return c.json(updated[0]);
+    } catch (error) {
+        console.error("Error updating location:", error);
+        return c.json({ error: "Failed to update location" }, 500);
     }
 });
 

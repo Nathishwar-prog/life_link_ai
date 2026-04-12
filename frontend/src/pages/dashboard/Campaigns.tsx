@@ -4,7 +4,7 @@ import { Button } from '../../components/ui/Button';
 import { Input } from '../../components/ui/Input';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '../../components/ui/Card';
 import { useAuth } from '../../context/AuthContext';
-import { Calendar, MapPin, Plus, Tent } from 'lucide-react';
+import { Calendar, MapPin, Plus, Tent, Trash2 } from 'lucide-react';
 import { useNotification } from '../../context/NotificationContext';
 
 interface Campaign {
@@ -65,15 +65,44 @@ export function Campaigns() {
                 body: JSON.stringify({ ...newCampaign, organizer_id: user?.id })
             });
 
+            const data = await res.json();
+
             if (res.ok) {
                 addNotification("Campaign created successfully", "success");
                 setIsCreating(false);
                 fetchCampaigns();
                 setNewCampaign({ title: '', description: '', location: '', start_date: '', end_date: '' });
             } else {
-                addNotification("Failed to create campaign", "error");
+                const errorMessage = data.details || data.error || "Failed to create campaign";
+                addNotification(errorMessage, "error");
+                console.error("Campaign creation failed:", data);
             }
         } catch (error) {
+            console.error("Network error during campaign creation:", error);
+            addNotification("Error connecting to server", "error");
+        }
+    };
+
+    const handleDelete = async (id: string) => {
+        if (!confirm("Are you sure you want to delete this campaign?")) return;
+        
+        try {
+            const res = await fetch(`http://localhost:8000/api/campaigns/${id}`, {
+                method: 'DELETE',
+                headers: {
+                    'Authorization': `Bearer ${localStorage.getItem('token')}`
+                }
+            });
+
+            if (res.ok) {
+                addNotification("Campaign deleted successfully", "success");
+                fetchCampaigns();
+            } else {
+                const data = await res.json();
+                addNotification(data.error || "Failed to delete campaign", "error");
+            }
+        } catch (error) {
+            console.error("Error deleting campaign:", error);
             addNotification("Error connecting to server", "error");
         }
     };
@@ -166,6 +195,15 @@ export function Campaigns() {
                                     <span className="text-xs font-medium px-2 py-1 bg-green-100 text-green-700 rounded-full">
                                         Upcoming
                                     </span>
+                                    {canCreate && (
+                                        <button 
+                                            onClick={() => handleDelete(camp.id)}
+                                            className="text-gray-400 hover:text-red-600 transition-colors ml-2"
+                                            title="Delete campaign"
+                                        >
+                                            <Trash2 className="h-4 w-4" />
+                                        </button>
+                                    )}
                                 </div>
                                 <CardTitle className="text-lg">{camp.title}</CardTitle>
                                 <CardDescription className="line-clamp-2">

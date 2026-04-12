@@ -60,6 +60,9 @@ export const donors = pgTable("donors", {
     address: text("address"),
     last_donation_date: timestamp("last_donation_date"),
     is_available: boolean("is_available").default(true),
+    latitude: doublePrecision("latitude"),
+    longitude: doublePrecision("longitude"),
+    last_location_update: timestamp("last_location_update"),
     created_at: timestamp("created_at").defaultNow(),
 });
 
