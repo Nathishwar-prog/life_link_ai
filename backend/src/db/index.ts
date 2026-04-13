@@ -18,7 +18,7 @@ export async function initDB() {
         },
         max: 10,
         idleTimeoutMillis: 30000,
-        connectionTimeoutMillis: 2000,
+        connectionTimeoutMillis: 10000, // Increased for serverless cold starts
     });
 
     // Handle unexpected pool errors
@@ -26,12 +26,24 @@ export async function initDB() {
         console.error('Unexpected error on idle database pool', err);
     });
 
-    // Verify connection
-    const client = await pool.connect();
-    try {
-        await client.query("CREATE EXTENSION IF NOT EXISTS postgis");
-    } finally {
-        client.release();
+    // Verify connection with retry logic for cold starts
+    let retries = 5;
+    while (retries > 0) {
+        try {
+            const client = await pool.connect();
+            try {
+                console.log("Database connected successfully!");
+                await client.query("CREATE EXTENSION IF NOT EXISTS postgis");
+                break; // Success
+            } finally {
+                client.release();
+            }
+        } catch (err) {
+            retries--;
+            console.error(`Database connection failed. Retrying... (${retries} retries left)`, err);
+            if (retries === 0) throw err;
+            await new Promise(res => setTimeout(res, 2000)); // Wait 2s before retry
+        }
     }
 
     db = drizzle(pool, { schema });
