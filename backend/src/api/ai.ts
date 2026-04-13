@@ -8,8 +8,10 @@ export const aiRouter = new Hono();
 
 // Initialize Gemini lazily to avoid ES module import hoisting issues with dotenv
 const getModel = () => {
+    // gemini-1.5-flash-latest is a stable and widely supported version
+    const modelName = "gemini-1.5-flash-latest"; 
     const genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY || "");
-    return genAI.getGenerativeModel({ model: "gemini-2.5-flash" });
+    return genAI.getGenerativeModel({ model: modelName });
 };
 
 aiRouter.post("/predict-shortage", async (c) => {
@@ -118,5 +120,58 @@ aiRouter.post("/donor-chat", async (c) => {
             }
         }
         return c.json({ error: errorMsg }, 500);
+    }
+});
+
+aiRouter.post("/voice-chat", async (c) => {
+    try {
+        const body = await c.req.json();
+        const audioFile = body.audio as string; // Expecting base64 string
+        const language = (body.language as string) || "auto";
+
+        console.log("Received Voice Chat Request - Language:", language);
+        
+        if (!audioFile) {
+            console.error("Voice Chat Error: No audio data in body");
+            return c.json({ error: "No audio data provided" }, 400);
+        }
+
+        const model = getModel();
+        
+        const systemPrompt = `
+            You are a helpful and professional medical assistant for a Blood Bank named "LifeLink AI". 
+            You are interacting primarily via VOICE. 
+            
+            CORE MISSION:
+            Answer questions about blood donation eligibility, the donation process, after-care, and general health tips.
+            
+            VOICE INTERACTION RULES:
+            1. MULTILINGUAL: Detect the user's language automatically. If they speak Tamil, reply in Tamil. If English, reply in English. If they use a mix, stay consistent with their primary language.
+            2. BREVITY: Keep responses extremely short (1-2 clear sentences). Avoid long lists or complex medical jargon.
+            3. PRONUNCIATION: Write responses that sound natural when spoken by Text-to-Speech engines.
+            4. SCOPE: Be firm but polite about your scope. Refuse to answer non-medical or non-blood-bank related questions.
+            5. TONE: Warm, encouraging, and medically responsible.
+        `;
+
+        const promptPart = "Listen carefully to this audio and provide a helpful, very short response in the same language.";
+
+        const result = await model.generateContent([
+            systemPrompt,
+            {
+                inlineData: {
+                    data: audioFile.split(',')[1] || audioFile, // Handle possible data URL prefix
+                    mimeType: "audio/webm"
+                }
+            },
+            promptPart
+        ]);
+
+        const response = await result.response;
+        const text = response.text();
+
+        return c.json({ reply: text });
+    } catch (error: any) {
+        console.error("AI Voice Chat Error:", error);
+        return c.json({ error: "Failed to process voice message: " + error.message }, 500);
     }
 });

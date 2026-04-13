@@ -2,7 +2,7 @@ import { drizzle, NodePgDatabase } from "drizzle-orm/node-postgres";
 import pg from "pg";
 import * as schema from "./schema.js";
 
-export let client: pg.Client;
+export let pool: pg.Pool;
 export let db: NodePgDatabase<typeof schema>;
 
 export async function initDB() {
@@ -10,17 +10,29 @@ export async function initDB() {
         throw new Error("DATABASE_URL is missing");
     }
 
-    // Check if check_db_schema script was run from backend dir or root? 
-    // Just rely on raw env
-
-    client = new pg.Client({
+    // Use a Pool instead of a single Client for better stability in serverless/idle environments
+    pool = new pg.Pool({
         connectionString: process.env.DATABASE_URL,
+        ssl: {
+            rejectUnauthorized: false
+        },
+        max: 10,
+        idleTimeoutMillis: 30000,
+        connectionTimeoutMillis: 2000,
     });
 
-    await client.connect();
+    // Handle unexpected pool errors
+    pool.on('error', (err) => {
+        console.error('Unexpected error on idle database pool', err);
+    });
 
-    // Enable PostGIS extension if not already enabled
-    await client.query("CREATE EXTENSION IF NOT EXISTS postgis");
+    // Verify connection
+    const client = await pool.connect();
+    try {
+        await client.query("CREATE EXTENSION IF NOT EXISTS postgis");
+    } finally {
+        client.release();
+    }
 
-    db = drizzle(client, { schema });
+    db = drizzle(pool, { schema });
 }
