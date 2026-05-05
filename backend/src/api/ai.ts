@@ -8,8 +8,8 @@ export const aiRouter = new Hono();
 
 // Initialize Gemini lazily to avoid ES module import hoisting issues with dotenv
 const getModel = () => {
-    // gemini-2.0-flash is the modern stable version
-    const modelName = "gemini-2.0-flash"; 
+    // gemini-2.5-flash is the modern stable version
+    const modelName = "gemini-2.5-flash"; 
     const genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY || "");
     return genAI.getGenerativeModel({ model: modelName });
 };
