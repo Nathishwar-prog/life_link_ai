@@ -8,8 +8,8 @@ export const aiRouter = new Hono();
 
 // Initialize Gemini lazily to avoid ES module import hoisting issues with dotenv
 const getModel = () => {
-    // gemini-1.5-flash-latest is a stable and widely supported version
-    const modelName = "gemini-1.5-flash-latest"; 
+    // gemini-2.0-flash is the modern stable version
+    const modelName = "gemini-2.0-flash"; 
     const genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY || "");
     return genAI.getGenerativeModel({ model: modelName });
 };
@@ -72,11 +72,24 @@ aiRouter.post("/donor-chat", async (c) => {
             history: [
                 {
                     role: "user",
-                    parts: [{ text: "You are a helpful and professional medical assistant for a Blood Bank. Your ONLY purpose is to answer questions about blood donation eligibility, the blood donation process, after-care, and general health tips related to blood and wellbeing. You MUST absolutely refuse to answer any questions that are not related to healthcare, medicine, or blood donation. If the user asks about programming, general knowledge, or anything outside your strict medical scope, respond politely stating that you are a specialized health assistant and can only answer health-related queries. Be encouraging but medically accurate. Important Rule: Keep your responses extremely short, punchy, and fast to read (1-3 sentences maximum). Get straight to the point without any fluff." }],
+                    parts: [{ text: `You are "LifeLink AI", a warm, professional, and knowledgeable health assistant for a Blood Bank. 
+                    
+                    YOUR PERSONALITY:
+                    - Empathetic, encouraging, and medically responsible.
+                    - Proactive (if a user is eligible, gently encourage them to find a nearby camp).
+                    
+                    YOUR SCOPE:
+                    - PRIMARY: Answer questions about blood donation eligibility, process, after-care, and blood health (hemoglobin, iron, etc.).
+                    - SECONDARY: General wellbeing tips related to recovery from donation.
+                    - STRICT LIMIT: Refuse all non-medical/non-blood-bank queries (coding, politics, general knowledge) politely but firmly.
+                    
+                    RESPONSE STYLE:
+                    - Helpful but concise (2-4 clear sentences).
+                    - Use a friendly tone, addressing the user as a hero for considering donation.` }],
                 },
                 {
                     role: "model",
-                    parts: [{ text: "Understood. I will provide short, quick, and concise assistance for blood donation queries." }],
+                    parts: [{ text: "Hello! I am LifeLink AI. I'm here to help you understand the blood donation process and how you can save lives. What can I answer for you today?" }],
                 },
                 ...formattedHistory
             ],
@@ -96,12 +109,17 @@ aiRouter.post("/donor-chat", async (c) => {
                 responseText = response.text();
                 break; // Success, exit loop
             } catch (err: any) {
-                if (err.message && err.message.includes("503") && retries > 1) {
-                    console.log(`Gemini API 503 Error. Retrying in 1s... (${retries - 1} attempts left)`);
-                    await delay(1000);
+                const errorMsg = err.message || "";
+                const isRateLimit = errorMsg.includes("429") || errorMsg.toLowerCase().includes("too many requests");
+                const isServiceUnavailable = errorMsg.includes("503") || errorMsg.toLowerCase().includes("overloaded");
+
+                if ((isRateLimit || isServiceUnavailable) && retries > 1) {
+                    const waitTime = isRateLimit ? 3000 : 1000;
+                    console.log(`Gemini API Error (${isRateLimit ? "429" : "503"}). Retrying in ${waitTime/1000}s... (${retries - 1} attempts left)`);
+                    await delay(waitTime);
                     retries--;
                 } else {
-                    throw err; // Re-throw if it's not a 503 or we're out of retries
+                    throw err; // Re-throw if it's not a retryable error or we're out of retries
                 }
             }
         }

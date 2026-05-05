@@ -8,7 +8,7 @@ export const requestsRouter = new Hono();
 
 // Initialize Gemini
 const genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY || "");
-const model = genAI.getGenerativeModel({ model: "gemini-pro" });
+const model = genAI.getGenerativeModel({ model: "gemini-2.0-flash" });
 
 requestsRouter.post("/match-donors", async (c) => {
     try {
