@@ -27,8 +27,8 @@ export function InventoryChart({ data }: InventoryChartProps) {
 
     // Custom colors mapping (optional, or generate dynamically)
     const colorMap: Record<string, string> = {
-        'O+': '#ef4444', 'A+': '#f87171', 'B+': '#b91c1c', 'AB+': '#991b1b',
-        'O-': '#fee2e2', 'A-': '#fca5a5', 'B-': '#ef4444', 'AB-': '#7f1d1d'
+        'O+': '#e32929ff', 'A+': '#f87171', 'B+': '#b91c1c', 'AB+': '#991b1b',
+        'O-': '#aa0707ff', 'A-': '#fca5a5', 'B-': '#ef4444', 'AB-': '#7f1d1d'
     };
     const colors = labels.map(label => colorMap[label] || '#9ca3af');
 

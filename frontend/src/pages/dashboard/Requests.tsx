@@ -1,5 +1,6 @@
 
 import { useState, useEffect, FormEvent } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { Button } from '../../components/ui/Button';
 import { Input } from '../../components/ui/Input';
 import { Card, CardContent, CardHeader, CardTitle } from '../../components/ui/Card';
@@ -21,7 +22,8 @@ interface Request {
 }
 
 export function Requests() {
-    const { user } = useAuth();
+    const { user, isLoading } = useAuth();
+    const navigate = useNavigate();
     const { addNotification } = useNotification();
     const [requests, setRequests] = useState<Request[]>([]);
     const [loading, setLoading] = useState(true);
@@ -32,9 +34,25 @@ export function Requests() {
     const [isEditing, setIsEditing] = useState(false);
     const [isSaving, setIsSaving] = useState(false);
 
+    const isAdmin = user?.role === 'ADMIN' || user?.role === 'STAFF';
+
     useEffect(() => {
-        fetchRequests();
-    }, []);
+        if (!isLoading) {
+            if (!user || !isAdmin) {
+                navigate('/dashboard', { replace: true });
+            } else {
+                fetchRequests();
+            }
+        }
+    }, [user, isAdmin, isLoading, navigate]);
+
+    if (isLoading || !user || !isAdmin) {
+        return (
+            <div className="flex justify-center items-center min-h-[400px]">
+                <Loader2 className="h-8 w-8 animate-spin text-red-600" />
+            </div>
+        );
+    }
 
     const fetchRequests = async () => {
         try {
@@ -144,8 +162,6 @@ export function Requests() {
             addNotification("Error deleting request", "error");
         }
     };
-
-    const isAdmin = user?.role === 'ADMIN' || user?.role === 'STAFF';
 
     return (
         <div className="space-y-6 relative">

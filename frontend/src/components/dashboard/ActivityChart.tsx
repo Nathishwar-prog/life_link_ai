@@ -21,13 +21,13 @@ export function ActivityChart() {
             categories: ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul'],
             axisBorder: { show: false },
             axisTicks: { show: false },
-            labels: { style: { colors: '#9ca3af' } }
+            labels: { style: { colors: '#1f1fbcff' } }
         },
         yaxis: {
-            labels: { style: { colors: '#9ca3af' } }
+            labels: { style: { colors: '#17c362ff' } }
         },
         grid: {
-            borderColor: '#f3f4f6',
+            borderColor: '#f8f3f6ff',
             strokeDashArray: 4,
             xaxis: { lines: { show: false } }
         },

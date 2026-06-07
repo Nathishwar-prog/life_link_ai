@@ -55,7 +55,6 @@ export function DashboardLayout() {
                 { name: 'Campaigns', href: '/dashboard/campaigns', icon: Tent },
                 { name: 'My Donations', href: '/dashboard/my-donations', icon: History },
                 { name: 'Donor Card', href: '/dashboard/donor-card', icon: CreditCard },
-                { name: 'Requests', href: '/dashboard/requests', icon: FileText },
                 { name: 'AI Assistant', href: '/dashboard/ai-assistant', icon: Bot },
             ];
         }
@@ -66,7 +65,6 @@ export function DashboardLayout() {
             { name: 'Search Blood', href: '/dashboard/search', icon: Search },
             { name: 'Campaigns', href: '/dashboard/campaigns', icon: Tent },
             { name: 'Patient Card', href: '/dashboard/patient-card', icon: CreditCard },
-            { name: 'Requests', href: '/dashboard/requests', icon: FileText },
             { name: 'AI Assistant', href: '/dashboard/ai-assistant', icon: Bot },
         ];
     };
